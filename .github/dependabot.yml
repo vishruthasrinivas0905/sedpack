@@ -1,0 +1,95 @@
+# To get started with Dependabot version updates, you'll need to specify which
+# package ecosystems to update and where the package manifests are located.
+# Please see the documentation for all configuration options:
+# https://docs.github.com/github/administering-a-repository/configuration-options-for-dependency-updates
+
+version: 2
+multi-ecosystem-groups:
+  infra:
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "08:00"
+      timezone: "Europe/Zurich"
+    labels: ["dependencies"]
+
+  code:
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "08:00"
+      timezone: "Europe/Zurich"
+    labels: ["dependencies"]
+
+
+updates:
+  - package-ecosystem: "npm"
+    directory: "/website"
+    patterns: ["*"]
+    multi-ecosystem-group: "infra"
+    labels: ["javascript"]
+    # Only care about our direct dependencies
+    allow:
+      - dependency-type: "direct"
+    ignore:
+      # Filter out semver patches updates to reduce the frequency of updates
+      - dependency-name: "*"
+        update-types: ["version-update:semver-patch"]
+    cooldown:
+      default-days: 5
+      semver-minor-days: 7
+      semver-patch-days: 3
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    patterns: ["*"]
+    multi-ecosystem-group: "infra"
+    labels: ["CI"]
+    ignore:
+      - dependency-name: "*"
+        # For github-actions, we only care about major version update
+        update-types:
+          - "version-update:semver-patch"
+          - "version-update:semver-minor"
+    cooldown:
+      default-days: 5
+      semver-minor-days: 7
+      semver-patch-days: 3
+
+  - package-ecosystem: "pip"
+    directory: "/"
+    patterns: ["*"]
+    multi-ecosystem-group: "code"
+    labels: ["python"]
+    # Only care about our direct dependencies
+    allow:
+      - dependency-type: "direct"
+    ignore:
+      # Filter out semver patches updates to reduce the frequency of updates
+      - dependency-name: "*"
+        update-types: ["version-update:semver-patch"]
+    cooldown:
+      default-days: 5
+      semver-minor-days: 7
+      semver-patch-days: 3
+
+  - package-ecosystem: "cargo"
+    directory: "/rust"
+    patterns: ["*"]
+    multi-ecosystem-group: "code"
+    labels: ["rust"]
+    # Only care about our direct dependencies
+    allow:
+      - dependency-type: "direct"
+    ignore:
+      # Filter out semver patches updates to reduce the frequency of updates
+      - dependency-name: "*"
+        update-types: ["version-update:semver-patch"]
+      # Peer dependencies of Cargo, not to bump independently:
+      - dependency-name: "semver"
+      - dependency-name: "crates-io"
+    cooldown:
+      default-days: 5
+      semver-minor-days: 7
+      semver-patch-days: 3
+

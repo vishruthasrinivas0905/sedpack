@@ -1,0 +1,88 @@
+// Copyright 2025 Google LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+use criterion::{Criterion, criterion_group, criterion_main};
+use glob::glob;
+use sedpack_rs::batch_iteration::BatchIterator;
+use sedpack_rs::example_iteration::{
+    CompressionType, ExampleIterator, ShardInfo, get_shard_progress,
+};
+pub use sedpack_rs::parallel_map::parallel_map;
+
+pub fn get_shard_files() -> Vec<ShardInfo> {
+    let shard_infos: Vec<_> = glob("mnist_fb_gzip/**/*.fb")
+        .expect("Failed to load dataset")
+        .filter_map(|p| p.ok())
+        .map(|p| p.display().to_string())
+        .map(|file_path| ShardInfo { file_path, compression_type: CompressionType::Gzip })
+        .collect();
+    println!(">> Decoding {} shards", shard_infos.len());
+    assert_eq!(shard_infos.len(), 275);
+    shard_infos
+}
+
+pub fn batch_iterator_benchmark_deterministic(c: &mut Criterion) {
+    let shard_infos = get_shard_files();
+    c.bench_function("BatchIterator", |b| {
+        b.iter(|| {
+            for batch in BatchIterator::new(shard_infos.clone(), 12, 32, vec![true, true], 0) {
+                let _ = std::hint::black_box(batch);
+            }
+        })
+    });
+}
+
+pub fn batch_iterator_benchmark_shuffled(c: &mut Criterion) {
+    let shard_infos = get_shard_files();
+    c.bench_function("BatchIterator", |b| {
+        b.iter(|| {
+            for batch in BatchIterator::new(shard_infos.clone(), 12, 32, vec![true, true], 256) {
+                let _ = std::hint::black_box(batch);
+            }
+        })
+    });
+}
+
+pub fn example_iterator_benchmark(c: &mut Criterion) {
+    let shard_infos = get_shard_files();
+    c.bench_function("ExampleIterator", |b| {
+        b.iter(|| {
+            for example in ExampleIterator::new(shard_infos.clone(), 12) {
+                let _ = std::hint::black_box(example);
+            }
+        })
+    });
+}
+
+pub fn parallel_map_benchmark(c: &mut Criterion) {
+    let shard_infos = get_shard_files();
+    c.bench_function("parallel_map", |b| {
+        b.iter(|| {
+            for shard in
+                parallel_map(|x| get_shard_progress(&x), shard_infos.clone().into_iter(), 32)
+            {
+                let _ = std::hint::black_box(shard);
+            }
+        })
+    });
+}
+
+criterion_group!(
+    benches,
+    batch_iterator_benchmark_deterministic,
+    batch_iterator_benchmark_shuffled,
+    example_iterator_benchmark,
+    parallel_map_benchmark,
+);
+criterion_main!(benches);

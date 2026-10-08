@@ -1,0 +1,62 @@
+name: mypy
+permissions:
+  contents: read
+  pull-requests: write
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - '**/*.py'
+      - '**/*.rs'
+      - 'mypy.ini'
+  merge_group:  # Needed for required workflows
+  # Run after a review has been submitted (this is a required workflow which
+  # might not be triggered when no code changes -- trigger before going to
+  # merge queue).
+  pull_request_review:
+    types: [submitted]
+
+jobs:
+  mypy:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Set up Python 3.11
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      - name: Get pip cache directory
+        id: pip-cache
+        shell: bash
+        run: |
+          echo "dir=$(pip cache dir)" >> $GITHUB_OUTPUT
+      - name: Use cached venv or create it
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        id: cache
+        with:
+          path: ${{ steps.pip-cache.outputs.dir }}
+          # The cache key depends on requirements.txt
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}-${{ hashFiles('pyproject.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+      # Build a virtualenv, but only if it doesn't already exist
+      - name: Populate pip cache
+        run: |
+          pip install --require-hashes --no-deps -r requirements.txt
+          pip install --editable ".[dev]"
+      - name: Save cache
+        id: cache-save
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        with:
+          path: ${{ steps.pip-cache.outputs.dir }}
+          key: ${{ steps.cache.outputs.cache-primary-key }}
+        if: steps.cache.outputs.cache-hit != 'true'
+      - name: Register matcher
+        run: echo ::add-matcher::./.github/python_matcher.json
+      - name: Running mypy
+        run: |
+          echo "PYTHONPATH=./src:$PYTHONPATH" >> $GITHUB_ENV
+          mkdir -p .mypy_cache
+          mypy --version
+          mypy --no-color-output --install-types --non-interactive src docs

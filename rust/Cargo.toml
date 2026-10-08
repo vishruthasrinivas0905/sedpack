@@ -1,0 +1,51 @@
+[package]
+name = "sedpack_rs"
+version = "0.1.4"
+edition = "2024"
+description = "Rust bindings for sedpack a general ML dataset package"
+authors = [
+    "Elie Bursztein",
+    "Karel Král",
+    "Jean-Michel Picod",
+]
+license = "Apache-2.0"
+# So far just a small subset of sedpack functionality. Not meant to be
+# published as a crate.
+publish = false
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[lib]
+name = "sedpack_rs"
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+criterion = "0.8.2"
+flatbuffers = "25.12"
+flate2 = { version = "1.1.9" }
+glob = "0.3.4"
+lz4_flex = { version = "0.14.0", default-features = false , features = ["frame"] }
+numpy = "0.29"
+pyo3 = "0.29"
+rand = "0.10"
+rayon = "1.12.0"
+strum = "0.28.0"
+strum_macros = "0.28.0"
+tracing = "0.1.44"
+tracing-perfetto = "0.1.5"
+tracing-subscriber = "0.3.23"
+yoke = { version = "0.8", features = ["derive"] }
+zstd = "0.14.0"
+
+# Release performance optimizations.
+[profile.release]
+codegen-units = 1
+lto = true
+panic = "abort"
+
+[profile.bench]
+debug = true
+
+[[bench]]
+name = "my_benchmark"
+# Otherwise needs nightly.
+harness = false

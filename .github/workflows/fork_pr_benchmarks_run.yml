@@ -1,0 +1,83 @@
+# Based on https://bencher.dev/docs/how-to/github-actions/
+name: Run Benchmarks
+permissions:
+  contents: read
+  pull-requests: write
+
+on:
+  pull_request:
+    types: [opened, edited]
+    paths:
+      - '**/*.rs'
+      - 'rust/Cargo.toml'
+      - 'rust/Cargo.lock'
+
+jobs:
+  benchmark_fork_pr_branch:
+    # Run only on the upstream repository.
+    if: github.repository == 'google/sedpack'
+    name: Run Fork PR Benchmarks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      # begin: Use source sedpack package
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Set up Python 3.11
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      - name: Get pip cache directory
+        id: pip-cache
+        shell: bash
+        run: |
+          echo "dir=$(pip cache dir)" >> $GITHUB_OUTPUT
+      - name: Use cached venv or create it
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        id: cache
+        with:
+          path: ${{ steps.pip-cache.outputs.dir }}
+          # The cache key depends on requirements.txt
+          key: ${{ matrix.platform.runner }}-pip-${{ hashFiles('pyproject.toml') }}-${{ hashFiles('requirements.txt') }}
+      # Build a virtualenv, but only if it doesn't already exist
+      - name: Populate pip cache
+        # requirements.txt is not reliable since across different platforms and
+        # their versions the pip package versions might vary. We regenerate it
+        # again from pyproject.toml every time when pyproject.toml or
+        # requirements.txt changes. The pinned versions in requirements.txt are
+        # tested by coverage since that is running on ubuntu which is also used
+        # to produce the main requirements.txt file.
+        run: |
+          pip install pip-tools
+          pip-compile --generate-hashes --extra dev pyproject.toml > requirements.txt
+          pip install -r requirements.txt
+        if: steps.cache.outputs.cache-hit != 'true'
+      - name: Save cache
+        id: cache-save
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        with:
+          path: ${{ steps.pip-cache.outputs.dir }}
+          key: ${{ steps.cache.outputs.cache-primary-key }}
+        if: steps.cache.outputs.cache-hit != 'true'
+      - name: Install sedpack locally
+        run: pip install --editable .
+      # end: Use source sedpack package
+
+      - name: Prepare benchmarking data
+        run: (cd rust/ ; bash benches/setup.sh )
+
+      - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f
+      - uses: bencherdev/bencher@f89d454e74a32a81b2eab29fe0afdb2316617342
+      - name: Benchmarking
+        run: (cd rust/ ; cargo bench > benchmark_results.txt)
+      - name: Upload Benchmark Results
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: benchmark_results.txt
+          path: ./rust/benchmark_results.txt
+      - name: Upload GitHub Pull Request Event
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: event.json
+          path: ${{ github.event_path }}

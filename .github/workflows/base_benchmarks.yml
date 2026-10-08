@@ -1,0 +1,54 @@
+# Based on the tutorial https://bencher.dev/docs/how-to/github-actions/
+
+on:
+  push:
+    branches: main
+    paths:
+      - '**/*.rs'
+      - 'rust/Cargo.toml'
+      - 'rust/Cargo.lock'
+  schedule:
+    # Run once a month (random values for minute, hour, day; any month or day)
+    - cron: "3 1 4 * *"
+  # Allows you to run this workflow manually from the Actions tab on GitHub.
+  workflow_dispatch:
+
+jobs:
+  benchmark_base_branch:
+    # Run only on the upstream repository.
+    if: github.repository == 'google/sedpack'
+    name: Continuous Benchmarking with Bencher
+    permissions:
+      checks: write
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          cache: 'pip'
+      - name: Installing sedpack pip package
+        run: |
+          pip install sedpack
+      - name: Prepare benchmarking data
+        working-directory: ./rust
+        run: bash benches/setup.sh
+      - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f
+      - uses: bencherdev/bencher@f89d454e74a32a81b2eab29fe0afdb2316617342
+      - name: Track base branch benchmarks with Bencher
+        working-directory: ./rust
+        run: |
+          bencher run \
+          --project sedpack \
+          --token '${{ secrets.BENCHER_API_TOKEN }}' \
+          --branch main \
+          --testbed ubuntu-latest \
+          --threshold-measure latency \
+          --threshold-test t_test \
+          --threshold-max-sample-size 64 \
+          --threshold-upper-boundary 0.99 \
+          --thresholds-reset \
+          --err \
+          --adapter rust_criterion \
+          --github-actions '${{ secrets.GITHUB_TOKEN }}' \
+          "cargo bench"

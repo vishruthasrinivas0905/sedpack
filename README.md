@@ -1,0 +1,71 @@
+# Sedpack - Scalable and efficient data packing
+
+[![Coverage Status](https://coveralls.io/repos/github/google/sedpack/badge.svg?branch=main)](https://coveralls.io/github/google/sedpack?branch=main)
+
+[Documentation](https://google.github.io/sedpack/)
+
+Mainly refactored from the [SCAAML](https://github.com/google/scaaml) project.
+
+## Available components
+
+See the documentation website:
+[https://google.github.io/sedpack/](https://google.github.io/sedpack/).
+
+## Install
+
+### Dependencies
+
+[TensorFlow 2.x](https://www.tensorflow.org/install) is an optional dependency
+required only when using the `"tfrec"` shard format or `Dataset.as_tfdataset`.
+It can be installed via `pip install "sedpack[tf]"`.
+
+Development dependencies:
+
+-   python-dev and gcc for [xxhash](https://pypi.org/project/xxhash/)
+
+### Dataset install
+
+#### Development install
+
+1.  Clone the repository: `git clone https://github.com/google/sedpack`
+2.  Install dependencies: `python3 -m pip install --require-hashes -r requirements.txt`
+3.  Install the package in development mode:
+    `python3 -m pip install --editable ".[dev]"` (or
+    `python3 -m pip install --editable .` for a minimal installation without
+    TensorFlow and development tools)
+
+#### Rust install
+
+-   Activate your Python virtual environment
+-   [Install Rust](https://www.rust-lang.org/tools/install)
+-   Run `maturin develop --release`
+-   Run `python -m pytest` from the project root directory -- no tests should
+    be skipped when TensorFlow is installed (e.g., via
+    `pip install -e ".[dev]"`)
+
+### Update dependencies
+
+Make sure to have: `sudo apt install python3 python3-pip python3-venv` and
+activated the virtual environment.
+
+Install requirements: `pip install --require-hashes -r base-tooling-requirements.txt`
+
+Update: `pip-compile pyproject.toml --generate-hashes --upgrade` and commit requirements.txt.
+
+#### Package install
+
+`pip install sedpack` (or `pip install "sedpack[tf]"` to include optional
+TensorFlow support)
+
+### Tutorial
+
+A tutorial and documentation is available at
+[https://google.github.io/sedpack/](https://google.github.io/sedpack/).
+
+Code for the tutorials is available in the `docs/tutorials` directory. For a
+"hello world" see
+[https://google.github.io/sedpack/tutorials/mnist/](https://google.github.io/sedpack/tutorials/mnist/).
+
+## Disclaimer
+
+This is not an official Google product.

@@ -1,0 +1,19 @@
+{
+  "name": "documentation",
+  "type": "module",
+  "version": "0.0.1",
+  "scripts": {
+    "dev": "astro dev",
+    "start": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "astro": "astro"
+  },
+  "dependencies": {
+    "@astrojs/starlight": "^0.42.4",
+    "astro": "^7.3.2",
+    "satteri-mathjax": "^0.1.0",
+    "sharp": "^0.35.5",
+    "typescript": "^7.0.2"
+  }
+}

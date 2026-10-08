@@ -1,0 +1,29 @@
+name: markdownlint
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - '**/*.md'
+      - '**/*.mdx'
+      - '.markdownlint.json'
+  merge_group:  # Needed for required workflows
+  # Run after a review has been submitted (this is a required workflow which
+  # might not be triggered when no code changes -- trigger before going to
+  # merge queue).
+  pull_request_review:
+    types: [submitted]
+
+jobs:
+  lint:
+    permissions:
+      contents: read
+      pull-requests: write
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+    - uses: DavidAnson/markdownlint-cli2-action@8de2aa07cae85fd17c0b35642db70cf5495f1d25
+      with:
+        config: .markdownlint.json
+        globs: |
+          *.md
+          **/*.md
